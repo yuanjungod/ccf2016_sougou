@@ -10,21 +10,24 @@ from sklearn.cross_validation import KFold
 from datetime import datetime
 import cfg
 
-#-----------------------myfunc-----------------------
-def myAcc(y_true,y_pred):
-    y_pred = np.argmax(y_pred,axis=1)
-    return np.mean(y_true == y_pred)
-#-----------------------load data--------------------
 
-df_all = pd.read_csv(cfg.data_path + 'all_v2.csv',encoding='utf8',nrows=200000)
+# -----------------------myfunc-----------------------
+def myAcc(y_true, y_pred):
+    y_pred = np.argmax(y_pred, axis=1)
+    return np.mean(y_true == y_pred)
+# -----------------------load data--------------------
+
+df_all = pd.read_csv(cfg.data_path + 'all_v2.csv', encoding='utf8', nrows=200000)
 ys = {}
-for label in ['Education','age','gender']:
+for label in ['Education', 'age', 'gender']:
     ys[label] = np.array(df_all[label])
+
 
 class Tokenizer():
     def __init__(self):
         self.n = 0
-    def __call__(self,line):
+
+    def __call__(self, line):
         tokens = []
         for query in line.split('\t'):
             words = [word for word in jieba.cut(query)]
@@ -36,18 +39,18 @@ class Tokenizer():
             print('='*20)
             print(tokens)
         self.n += 1
-        if self.n%10000==0:
+        if self.n % 10000==0:
             print(self.n)
         return tokens
 
-tfv = TfidfVectorizer(tokenizer=Tokenizer(),min_df=3,max_df=0.95,sublinear_tf=True)
+tfv = TfidfVectorizer(tokenizer=Tokenizer(), min_df=3, max_df=0.95, sublinear_tf=True)
 X_sp = tfv.fit_transform(df_all['query'])
-pickle.dump(X_sp,open(cfg.data_path + 'tfidf_10W.feat','wb'))
+pickle.dump(X_sp, open(cfg.data_path + 'tfidf_10W.feat','wb'))
 
 df_stack = pd.DataFrame(index=range(len(df_all)))
 
-#-----------------------stack for education/age/gender------------------
-for lb in ['Education','age','gender']:
+# -----------------------stack for education/age/gender------------------
+for lb in ['Education', 'age', 'gender']:
     print(lb)
     TR = 100000
     num_class = len(pd.value_counts(ys[lb]))
@@ -58,23 +61,24 @@ for lb in ['Education','age','gender']:
     X_te = X_sp[TR:]
     y_te = ys[lb][TR:]
 
-    stack = np.zeros((X.shape[0],num_class))
-    stack_te = np.zeros((X_te.shape[0],num_class))
+    stack = np.zeros((X.shape[0], num_class))
+    stack_te = np.zeros((X_te.shape[0], num_class))
 
-    for i,(tr,va) in enumerate(KFold(len(y),n_folds=n)):
-        print('%s stack:%d/%d'%(str(datetime.now()),i+1,n))
+    for i, (tr, va) in enumerate(KFold(len(y), n_folds=n)):
+        print('%s stack:%d/%d' % (str(datetime.now()), i+1, n))
         clf = LogisticRegression(C=3)
-        clf.fit(X[tr],y[tr])
+        clf.fit(X[tr], y[tr])
         y_pred_va = clf.predict_proba(X[va])
         y_pred_te = clf.predict_proba(X_te)
-        print('va acc:',myAcc(y[va],y_pred_va))
-        print('te acc:',myAcc(y_te,y_pred_te))
+        print('va acc:', myAcc(y[va], y_pred_va))
+        print('te acc:', myAcc(y_te, y_pred_te))
         stack[va] += y_pred_va
         stack_te += y_pred_te
     stack_te /= n
-    stack_all = np.vstack([stack,stack_te])
+    stack_all = np.vstack([stack, stack_te])
     for i in range(stack_all.shape[1]):
-        df_stack['tfidf_{}_{}'.format(lb,i)] = stack_all[:,i]
+        df_stack['tfidf_{}_{}'.format(lb, i)] = stack_all[:, i]
 
-df_stack.to_csv(cfg.data_path + 'tfidf_stack_20W.csv',index=None,encoding='utf8')
-print(datetime.now(),'save tfidf stack done!')
+df_stack.to_csv(cfg.data_path + 'tfidf_stack_20W.csv', index=None, encoding='utf8')
+print(datetime.now(), 'save tfidf stack done!')
+

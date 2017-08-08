@@ -16,7 +16,7 @@ import cfg
 
 #----------------------load data--------------------------------
 df_tr = []
-for i,line in enumerate(open(cfg.data_path + 'user_tag_query.10W.TRAIN',encoding='GB18030')):
+for i, line in enumerate(open(cfg.data_path + 'user_tag_query.10W.TRAIN', encoding='GB18030')):
     segs = line.split('\t')
     row = {}
     row['Id'] = segs[0]
@@ -27,8 +27,8 @@ for i,line in enumerate(open(cfg.data_path + 'user_tag_query.10W.TRAIN',encoding
     df_tr.append(row)
 df_tr = pd.DataFrame(df_tr)
 
-df_te=[]
-for i,line in enumerate(open(cfg.data_path + 'user_tag_query.10W.TEST',encoding='GB18030')):
+df_te = []
+for i, line in enumerate(open(cfg.data_path + 'user_tag_query.10W.TEST',encoding='GB18030')):
     segs = line.split('\t')
     row = {}
     row['Id'] = segs[0]
@@ -43,14 +43,16 @@ df_all = df_tr
 # df_all = pd.concat([df_tr,df_te]).fillna(1)
 # df_all.index = range(len(df_all))
 
-for lb in ['Education','age','gender']:
+for lb in ['Education', 'age', 'gender']:
     df_all[lb] = df_all[lb] - 1
     print(df_all.iloc[:100000][lb].value_counts())
-    
+
+
 class Tokenizer():
     def __init__(self):
         self.n = 0
-    def __call__(self,line):
+
+    def __call__(self, line):
         tokens = []
         for query in line.split('\t'):
             words = [word for word in jieba.cut(query)]
@@ -62,8 +64,8 @@ class Tokenizer():
             print('='*20)
             print(tokens)
         self.n += 1
-        if self.n%10000==0:
-            print(self.n,end=' ')
+        if self.n % 10000 == 0:
+            print(self.n, end=' ')
         return tokens    
 
 tfv = TfidfVectorizer(tokenizer=Tokenizer(),min_df=3,max_df=0.95,sublinear_tf=True)
@@ -72,28 +74,28 @@ X_sp = tfv.fit_transform(df_all['query'])
 print(len(tfv.vocabulary_))
 X_all = X_sp
 
-#-----------------------------fill nan-------------------------------------
+# -----------------------------fill nan-------------------------------------
 '''填充空值'''
-for lb,idx in [('Education',0),('age',2),('gender',3)]:
-    tr = np.where(df_all[lb]!=-1)[0]
-    va = np.where(df_all[lb]==-1)[0]
+for lb, idx in [('Education', 0), ('age', 2), ('gender', 3)]:
+    tr = np.where(df_all[lb] != -1)[0]
+    va = np.where(df_all[lb] == -1)[0]
 lb = 'Education'
 idx = 0
-tr = np.where(df_all[lb]!=-1)[0]
-va = np.where(df_all[lb]==-1)[0]
-df_all.iloc[va,idx] = LogisticRegression(C=1).fit(X_all[tr],df_all.iloc[tr,idx]).predict(X_all[va])
+tr = np.where(df_all[lb] != -1)[0]
+va = np.where(df_all[lb] == -1)[0]
+df_all.iloc[va, idx] = LogisticRegression(C=1).fit(X_all[tr], df_all.iloc[tr, idx]).predict(X_all[va])
 
 lb = 'age'
 idx = 2
-tr = np.where(df_all[lb]!=-1)[0]
-va = np.where(df_all[lb]==-1)[0]
-df_all.iloc[va,idx] = LogisticRegression(C=2).fit(X_all[tr],df_all.iloc[tr,idx]).predict(X_all[va])
+tr = np.where(df_all[lb] !=-1 )[0]
+va = np.where(df_all[lb] ==-1 )[0]
+df_all.iloc[va,idx] = LogisticRegression(C=2).fit(X_all[tr], df_all.iloc[tr, idx]).predict(X_all[va])
 
 lb = 'gender'
 idx = 3
-tr = np.where(df_all[lb]!=-1)[0]
-va = np.where(df_all[lb]==-1)[0]
-df_all.iloc[va,idx] = LogisticRegression(C=2).fit(X_all[tr],df_all.iloc[tr,idx]).predict(X_all[va])
+tr = np.where(df_all[lb] !=-1 )[0]
+va = np.where(df_all[lb] ==-1 )[0]
+df_all.iloc[va, idx] = LogisticRegression(C=2).fit(X_all[tr], df_all.iloc[tr, idx]).predict(X_all[va])
 
-df_all = pd.concat([df_all,df_te]).fillna(0)
-df_all.to_csv(cfg.data_path + 'all_v2.csv',index=None)
+df_all = pd.concat([df_all, df_te]).fillna(0)
+df_all.to_csv(cfg.data_path + 'all_v2.csv', index=None)
